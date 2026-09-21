@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOTFLIX - Xem Phim Miễn Phí</title>
+    <style>
+        body { margin: 0; background-color: #141414; color: #ccc; font-family: 'Segoe UI', sans-serif; }
+        
+        header { padding: 20px 50px; background-color: #0b0b0b; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        header h1 { color: #e50914; margin: 0; font-size: 32px; font-weight: bold; cursor: pointer; }
+        
+        .search-box { display: flex; gap: 10px; }
+        .search-box input { padding: 10px 20px; border-radius: 20px; border: none; background-color: #222; color: white; width: 300px; outline: none; }
+        .search-box button { padding: 10px 20px; border-radius: 20px; border: none; background-color: #e50914; color: white; font-weight: bold; cursor: pointer; }
+
+        /* Bảng Lọc Siêu Đồ Sộ Phong Cách RoPhim */
+        .filter-section { background-color: #111; padding: 20px 50px; border-bottom: 1px solid #222; }
+        .filter-header { display: flex; align-items: center; gap: 10px; color: #f39c12; font-weight: bold; font-size: 16px; margin-bottom: 15px; cursor: pointer; }
+        
+        .filter-row { display: flex; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #222; padding-bottom: 10px; }
+        .filter-row:last-child { border-bottom: none; }
+        .filter-label { width: 110px; color: #fff; font-size: 13px; padding-top: 3px; font-weight: bold; flex-shrink: 0; }
+        .filter-options { display: flex; flex-wrap: wrap; gap: 6px 14px; flex: 1; }
+        .filter-options span { font-size: 13px; cursor: pointer; transition: 0.2s; padding: 2px 6px; border-radius: 4px; color: #aaa; }
+        .filter-options span:hover { color: #fff; background: #222; }
+        .filter-options span.active { color: #f39c12; font-weight: bold; background: rgba(243, 156, 18, 0.1); }
+
+        .filter-actions { display: flex; gap: 15px; margin-top: 15px; padding-left: 110px; }
+        .btn-apply { background-color: #f39c12; color: #000; border: none; padding: 8px 25px; font-weight: bold; border-radius: 20px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .btn-apply:hover { background-color: #e67e22; }
+        .btn-close { background-color: #333; color: white; border: none; padding: 8px 25px; font-weight: bold; border-radius: 20px; cursor: pointer; font-size: 13px; }
+
+        main { padding: 30px 50px; }
+        h2 { margin-bottom: 20px; color: white; border-left: 4px solid #e50914; padding-left: 10px; }
+
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .movie-card { background-color: #222; border-radius: 5px; overflow: hidden; cursor: pointer; transition: 0.2s; }
+        .movie-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(229,9,20,0.5); }
+        .movie-card img { width: 100%; height: 270px; object-fit: cover; }
+        .movie-info { padding: 10px; }
+        .movie-info h3 { margin: 0 0 5px 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .load-more-container { text-align: center; margin-top: 40px; }
+        .btn-load-more { background-color: #333; color: white; border: 1px solid #555; padding: 10px 40px; font-size: 15px; border-radius: 25px; cursor: pointer; display: none; transition: 0.3s; }
+        .btn-load-more:hover { background-color: #e50914; border-color: #e50914; }
+
+        /* Modal Player */
+        #videoModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 1000; overflow-y: auto; }
+        .close-btn { position: fixed; top: 20px; right: 40px; font-size: 40px; color: white; background: transparent; border: none; cursor: pointer; z-index: 1001; }
+        .player-wrapper { width: 75%; margin: 40px auto; }
+        #videoFrame { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; background: #000; }
+        .movie-title-player { color: white; margin-top: 20px; font-size: 24px; }
+        .server-list { display: flex; gap: 15px; margin-top: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .server-btn { background: transparent; color: #aaa; border: none; font-size: 16px; cursor: pointer; padding: 5px 10px; font-weight: bold; }
+        .server-btn.active { color: #f39c12; border-bottom: 2px solid #f39c12; }
+        .episode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 20px; padding-bottom: 50px; }
+        .ep-btn { background-color: #222; color: #ccc; border: 1px solid #333; padding: 10px; border-radius: 5px; cursor: pointer; text-align: center; }
+        .ep-btn.active { background-color: #e50914; color: white; border-color: #e50914; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 onclick="window.location.reload()">HOTFLIX</h1>
+        <form class="search-box" id="form">
+            <input type="text" id="search" placeholder="Tìm kiếm phim...">
+            <button type="submit">Tìm</button>
+        </form>
+    </header>
+
+    <!-- Bảng Lọc Chuẩn RoPhim -->
+    <div class="filter-section">
+        <div class="filter-header" onclick="toggleFilterPanel()">▼ Bộ Lọc Nâng Cao</div>
+        
+        <div id="filterContent">
+            <div class="filter-row">
+                <div class="filter-label">Quốc gia:</div>
+                <div class="filter-options" id="filter-country">
+                    <span class="active" data-val="">Tất cả</span>
+                    <span data-val="trung-quoc">Trung Quốc</span><span data-val="han-quoc">Hàn Quốc</span>
+                    <span data-val="phap">Pháp</span><span data-val="viet-nam">Việt Nam</span>
+                    <span data-val="nhat-ban">Nhật Bản</span><span data-val="an-do">Ấn Độ</span>
+                    <span data-val="au-my">Âu Mỹ</span><span data-val="hong-kong">Hồng Kông</span>
+                    <span data-val="thai-lan">Thái Lan</span><span data-val="dai-loan">Đài Loan</span>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">Loại phim:</div>
+                <div class="filter-options" id="filter-type">
+                    <span class="active" data-val="">Tất cả</span>
+                    <span data-val="phim-bo">Phim bộ</span><span data-val="phim-le">Phim lẻ</span>
+                    <span data-val="hoat-hinh">Hoạt hình</span><span data-val="tv-shows">TV Shows</span>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">Âm thanh:</div>
+                <div class="filter-options" id="filter-audio">
+                    <span class="active" data-val="">Tất cả</span>
+                    <span data-val="vietsub">Vietsub</span><span data-val="thuyet-minh">Thuyết Minh</span><span data-val="long-tieng">Lồng Tiếng</span>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">Thể loại:</div>
+                <div class="filter-options" id="filter-genre">
+                    <span class="active" data-val="">Tất cả</span>
+                    <span data-val="hanh-dong">Hành Động</span><span data-val="vo-thuat">Võ Thuật</span>
+                    <span data-val="tinh-cam">Tình Cảm</span><span data-val="co-trang">Cổ Trang</span>
+                    <span data-val="hai-huoc">Hài Hước</span><span data-val="vien-tuong">Viễn Tưởng</span>
+                    <span data-val="hoat-hinh">Hoạt Hình</span><span data-val="kinh-di">Kinh Dị</span>
+                    <span data-val="tam-ly">Tâm Lý</span><span data-val="hinh-su">Hình Sự</span>
+                    <span data-val="phieu-luu">Phiêu Lưu</span><span data-val="tai-lieu">Tài Liệu</span>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">Năm sản xuất:</div>
+                <div class="filter-options" id="filter-year">
+                    <span class="active" data-val="">Tất cả</span>
+                    <span data-val="2026">2026</span><span data-val="2025">2025</span><span data-val="2024">2024</span>
+                    <span data-val="2023">2023</span><span data-val="2022">2022</span><span data-val="2021">2021</span>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn-apply" onclick="applyFilters()">Lọc kết quả ➔</button>
+                <button class="btn-close" onclick="toggleFilterPanel()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <h2 id="sectionTitle">Phim Mới Cập Nhật</h2>
+        <div class="movie-grid" id="movieGrid"></div>
+        <div class="load-more-container">
+            <button id="btnLoadMore" class="btn-load-more" onclick="loadMore()">▼ Xem thêm phim</button>
+        </div>
+    </main>
+
+    <div id="videoModal">
+        <button class="close-btn" onclick="closePlayer()">×</button>
+        <div class="player-wrapper">
+            <iframe id="videoFrame" allowfullscreen></iframe>
+            <h2 class="movie-title-player" id="playerTitle">Đang tải...</h2>
+            <div class="server-list" id="serverList"></div>
+            <div class="episode-grid" id="episodeList"></div>
+        </div>
+    </div>
+
+    <script>
+        const IMG_PATH = 'https://phimimg.com/';
+        const movieGrid = document.getElementById('movieGrid');
+        const sectionTitle = document.getElementById('sectionTitle');
+        const btnLoadMore = document.getElementById('btnLoadMore');
+        
+        let currentPage = 1;
+        let currentApiUrl = 'https://phimapi.com/danh-sach/phim-moi-cap-nhat';
+        let isSearching = false;
+        let currentMovieData = null;
+
+        function toggleFilterPanel() {
+            const content = document.getElementById('filterContent');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        document.querySelectorAll('.filter-options span').forEach(item => {
+            item.addEventListener('click', function() {
+                this.parentNode.querySelectorAll('span').forEach(s => s.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+async function applyFilters() {
+            // Lấy toàn bộ các điều kiện người dùng đã chọn
+            const type = document.querySelector('#filter-type .active').getAttribute('data-val');
+            const genre = document.querySelector('#filter-genre .active').getAttribute('data-val');
+            const country = document.querySelector('#filter-country .active').getAttribute('data-val');
+            const year = document.querySelector('#filter-year .active').getAttribute('data-val');
+            const audio = document.querySelector('#filter-audio .active') ? document.querySelector('#filter-audio .active').getAttribute('data-val') : null;
+            currentPage = 1;
+            isSearching = false;
+            
+            // Hiển thị trạng thái đang tải vì gọi nhiều API sẽ mất vài giây
+            movieGrid.innerHTML = '<h3 style="color:#f39c12; width:100%; text-align:center;">Đang quét kho dữ liệu chuyên sâu... Vui lòng chờ!</h3>';
+            btnLoadMore.style.display = 'none';
+
+            // 1. Xác định luồng API chính để kéo dữ liệu số lượng lớn
+let baseApiUrl = 'https://hotflix-backend-1053.onrender.com';
+        let queryParams = [];
+
+        // Đẩy tất cả các điều kiện có dữ liệu vào một mảng
+        if (genre) queryParams.push(`genre=${genre}`);
+        if (country) queryParams.push(`country=${country}`);
+        if (type) queryParams.push(`type=${type}`);
+        if (year) queryParams.push(`year=${year}`); 
+        if (audio) queryParams.push(`audio=${audio}`);
+        // Ghép nối các điều kiện lại bằng dấu '&' (Ví dụ: ?country=trung-quoc&year=2026)
+        if (queryParams.length > 0) {
+            baseApiUrl += '?' + queryParams.join('&');
+            console.log("Đường link API đang gửi đi là:", baseApiUrl);
+        }
+        
+        currentApiUrl = baseApiUrl;
+
+            try {
+            // 2. Gọi API lấy dữ liệu đã được Backend lọc sẵn bằng SQL
+            const separator = baseApiUrl.includes('?') ? '&' : '?';
+            const response = await fetch(baseApiUrl + separator + 'page=1');
+            const data = await response.json();
+            
+            // Nhận kết quả trực tiếp, KHÔNG CẦN filter bằng Javascript nữa
+            const filteredMovies = data.items || [];
+
+            // 4. In kết quả cuối cùng ra màn hình
+                movieGrid.innerHTML = '';
+                sectionTitle.innerText = `Lọc đa điều kiện: Đã tìm thấy ${filteredMovies.length} phim`;
+
+                if(filteredMovies.length === 0) {
+                    movieGrid.innerHTML = '<h3 style="color:white; width:100%; text-align:center;">Không có phim nào thỏa mãn toàn bộ điều kiện cực ngặt này!</h3>';
+                    return;
+                }
+
+              filteredMovies.forEach(movie => {
+                    const { name, thumb_url, slug } = movie;
+                    const movieEl = document.createElement('div');
+                    movieEl.classList.add('movie-card');
+                    movieEl.onclick = () => fetchMovieDetail(slug);
+                    
+                    // Chốt chặn an toàn: Kiểm tra nếu thumb_url bị null
+                    let imageSrc = 'https://placehold.co/200x300/222/FFF?text=No+Image'; // Ảnh mặc định
+                    if (thumb_url) {
+                        imageSrc = thumb_url.startsWith('http') ? thumb_url : IMG_PATH + thumb_url;
+                    }
+                    
+                    movieEl.innerHTML = `
+                        <img src="${imageSrc}" alt="${name}">
+                        <div class="movie-info"><h3>${name}</h3></div>
+                    `;
+                    movieGrid.appendChild(movieEl);
+                });
+if (filteredMovies.length > 0) {
+            btnLoadMore.style.display = 'inline-block';
+        }            } catch (error) {
+                console.error("Lỗi lọc đa tầng:", error);
+                movieGrid.innerHTML = '<h3 style="color:red;">Đường truyền bị gián đoạn khi quét dữ liệu!</h3>';
+            }
+        }
+        async function getMovies(url) {
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const movies = data.data ? data.data.items : data.items;
+                
+                if(!movies || movies.length === 0) {
+                    if (currentPage === 1) movieGrid.innerHTML = '<h3 style="color:white;">Không tìm thấy kết quả phù hợp!</h3>';
+                    btnLoadMore.style.display = 'none';
+                    return;
+                }
+                
+                movies.forEach(movie => {
+                    const { name, thumb_url, slug } = movie;
+                    const movieEl = document.createElement('div');
+                    movieEl.classList.add('movie-card');
+                    movieEl.onclick = () => fetchMovieDetail(slug);
+                    
+                    let imageSrc = 'https://placeholder.com/200x300/222/FFF?text=No+Image';
+if (thumb_url) {
+    imageSrc = thumb_url.startsWith('http') ? thumb_url : (IMG_PATH + thumb_url);
+}
+                    movieEl.innerHTML = `
+                        <img src="${imageSrc}" alt="${name}">
+                        <div class="movie-info"><h3>${name}</h3></div>
+                    `;
+                    movieGrid.appendChild(movieEl);
+                });
+
+                if (!isSearching) btnLoadMore.style.display = 'inline-block';
+            } catch (error) { console.error(error); }
+        }
+
+        function loadMore() {
+            currentPage++;
+            const separator = currentApiUrl.includes('?') ? '&' : '?';
+            getMovies(currentApiUrl + separator + 'page=' + currentPage);
+        }
+
+async function fetchMovieDetail(slug) {
+            try {
+                document.body.style.overflow = 'hidden'; // Khóa cuộn trang chính
+
+                document.getElementById('videoModal').style.display = 'block';
+                document.getElementById('playerTitle').innerText = "Đang tải...";
+                document.getElementById('videoFrame').src = '';
+                document.getElementById('serverList').innerHTML = '';
+                document.getElementById('episodeList').innerHTML = '';
+
+                const res = await fetch(`https://phimapi.com/phim/${slug}`);
+                const data = await res.json();
+                
+                document.getElementById('playerTitle').innerText = data.movie.name;
+                currentMovieData = data.episodes;
+
+                if (currentMovieData && currentMovieData.length > 0) {
+                    renderServers();
+                }
+            } catch (error) { 
+                console.error(error); 
+            }
+        }        
+
+        function renderServers() {
+            const serverListEl = document.getElementById('serverList');
+            serverListEl.innerHTML = '';
+
+            currentMovieData.forEach((serverObj, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'server-btn';
+                btn.innerText = serverObj.server_name;
+                btn.onclick = () => {
+                    document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderEpisodes(index);
+                };
+                serverListEl.appendChild(btn);
+            });
+            serverListEl.firstChild.click();
+        }
+
+        function renderEpisodes(serverIndex) {
+            const episodeListEl = document.getElementById('episodeList');
+            episodeListEl.innerHTML = '';
+            const episodes = currentMovieData[serverIndex].server_data;
+
+            episodes.forEach((ep) => {
+                const btn = document.createElement('button');
+                btn.className = 'ep-btn';
+                btn.innerText = ep.name;
+                btn.onclick = () => {
+                    document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById('videoFrame').src = ep.link_embed;
+                };
+                episodeListEl.appendChild(btn);
+            });
+            if(episodeListEl.firstChild) episodeListEl.firstChild.click();
+        }
+
+function closePlayer() {
+            document.getElementById('videoModal').style.display = 'none';
+            document.getElementById('videoFrame').src = '';
+            
+            // Thêm dòng này để mở lại thanh cuộn khi tắt modal
+            document.body.style.overflow = 'auto'; 
+        }
+        const form = document.getElementById('form');
+        const search = document.getElementById('search');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const searchTerm = search.value.trim();
+            if(searchTerm !== '') {
+                isSearching = true;
+                movieGrid.innerHTML = '';
+                getMovies(`https://phimapi.com/v1/api/tim-kiem?keyword=${searchTerm}&limit=30`);
+                sectionTitle.innerText = `Tìm kiếm: "${searchTerm}"`;
+            } else {
+                window.location.reload();
+            }
+        });
+
+        getMovies(currentApiUrl + '?page=1');
+    </script>
+</body>
+</html>
