@@ -189,6 +189,7 @@ async function applyFilters() {
 
             // 1. Xác định luồng API chính để kéo dữ liệu số lượng lớn
 let baseApiUrl = 'https://hotflix-backend-1053.onrender.com/api/movies';
+let queryParams = [];
         // Đẩy tất cả các điều kiện có dữ liệu vào một mảng
         if (genre) queryParams.push(`genre=${genre}`);
         if (country) queryParams.push(`country=${country}`);
